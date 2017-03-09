@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/pivotal-cf/om/api"
 	"github.com/pivotal-cf/om/flags"
@@ -59,7 +58,7 @@ func (e Errands) Execute(args []string) error {
 	e.tableWriter.SetHeader([]string{"Name", "Post Deploy Enabled"})
 
 	for _, errand := range errandsOutput.Errands {
-		e.tableWriter.Append([]string{errand.Name, strconv.FormatBool(errand.PostDeploy)})
+		e.tableWriter.Append([]string{errand.Name, fmt.Println(errand.PostDeploy)})
 	}
 
 	e.tableWriter.Render()

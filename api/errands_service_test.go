@@ -30,17 +30,35 @@ var _ = Describe("ErrandsService", func() {
 				path = req.URL.Path
 
 				return &http.Response{StatusCode: http.StatusOK,
-					Body: ioutil.NopCloser(strings.NewReader(`{"errands":[{"post_deploy":true,"name":"first-errand"},{"post_deploy":false,"name":"second-errand"}]}`)),
+					Body: ioutil.NopCloser(strings.NewReader(`{
+						"errands":[{
+							"post_deploy":true,"name":"first-errand"},
+							{"post_deploy":false,"name":"second-errand"},
+							{"post_deploy":false,"pre_delete":true,"name":"third-errand"},
+							{"post_deploy":true,"pre_delete":false,"name":"fourth-errand"},
+							{"pre_delete":false,"name":"fifth-errand"},
+							{"pre_delete":true,"name":"sixth-errand"}
+							]
+						}`)),
 				}, nil
 			}
 
 			output, err := service.List("some-product-id")
 			Expect(err).NotTo(HaveOccurred())
 
+			t := new(bool)
+			f := new(bool)
+			*t = true
+			*f = false
+
 			Expect(output).To(Equal(api.ErrandsListOutput{
 				Errands: []api.Errand{
-					{Name: "first-errand", PostDeploy: true},
-					{Name: "second-errand", PostDeploy: false},
+					{Name: "first-errand", PostDeploy: t},
+					{Name: "second-errand", PostDeploy: f},
+					{Name: "third-errand", PostDeploy: f, PreDelete: t},
+					{Name: "fourth-errand", PostDeploy: t, PreDelete: f},
+					{Name: "fifth-errand", PreDelete: f},
+					{Name: "sixth-errand", PreDelete: t},
 				},
 			}))
 

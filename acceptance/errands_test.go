@@ -18,12 +18,16 @@ var _ = Describe("errands command", func() {
 		server *httptest.Server
 	)
 
-	const tableOutput = `+---------------+---------------------+
-|     NAME      | POST DEPLOY ENABLED |
-+---------------+---------------------+
-| some-errand-1 | true                |
-| some-errand-2 | false               |
-+---------------+---------------------+
+	const tableOutput = `+---------------+---------------------+--------------------+
+|     NAME      | POST DEPLOY ENABLED | PRE DELETE ENABLED |
++---------------+---------------------+--------------------+
+| some-errand-1 | true                |                    |
+| some-errand-2 | false               |                    |
+| some-errand-3 | false               | true               |
+| some-errand-4 |                     | true               |
+| some-errand-5 |                     | false              |
+| some-errand-6 | true                | false              |
++---------------+---------------------+--------------------+
 `
 
 	BeforeEach(func() {
@@ -48,7 +52,11 @@ var _ = Describe("errands command", func() {
 				w.Write([]byte(`{
 					"errands": [
 						{"post_deploy":true,"name":"some-errand-1"},
-						{"post_deploy": false, "name": "some-errand-2"}
+						{"post_deploy": false, "name": "some-errand-2"},
+						{"post_deploy": false, "pre-delete": true, "name": "some-errand-3"},
+						{"pre-delete": true, "name": "some-errand-4"},
+						{"pre-delete": false, "name": "some-errand-5"},
+						{"post_deploy": true, "pre-delete": false, "name": "some-errand-6"}
 					]
 				}`))
 			default:
@@ -59,7 +67,7 @@ var _ = Describe("errands command", func() {
 		}))
 	})
 
-	It("lists the errands belonging to the product", func() {
+	FIt("lists the errands belonging to the product", func() {
 		command := exec.Command(pathToMain,
 			"--target", server.URL,
 			"--username", "some-username",

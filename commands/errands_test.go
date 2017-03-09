@@ -28,12 +28,19 @@ var _ = Describe("Errands", func() {
 
 	Describe("Execute", func() {
 		It("lists the available products", func() {
-			errandsService.ListReturns(api.ErrandsListOutput{
-				Errands: []api.Errand{
-					{Name: "first-errand", PostDeploy: true},
-					{Name: "second-errand", PostDeploy: false},
-				},
-			}, nil)
+			errand1 = api.Errand{Name: "first-errand", PostDeploy: new(bool)}
+			errand2 = api.Errand{Name: "second-errand", PostDeploy: new(bool)}
+
+			*errand1.PostDeploy = true
+			*errand1.PostDeploy = false
+
+			errandsListOutput := api.ErrandsListOutput{
+				Errands: []api.Errand{errand1, errand2},
+			}
+
+			errandsListOutput.Errands
+
+			errandsService.ListReturns(errandsListOutput, nil)
 
 			stagedProductsFinder.FindReturns(api.StagedProductsFindOutput{
 				Product: api.StagedProduct{

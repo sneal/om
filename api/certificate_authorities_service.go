@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -20,6 +22,11 @@ type CA struct {
 	ExpiresOn string `json:"expires_on"`
 	Active    bool
 	CertPEM   string `json:"cert_pem"`
+}
+
+type CertificateAuthorityBody struct {
+	CertPem       string `json:"cert_pem"`
+	PrivateKeyPem string `json:"private_key_pem"`
 }
 
 func NewCertificateAuthoritiesService(client httpClient) CertificateAuthoritiesService {
@@ -59,6 +66,37 @@ func (c CertificateAuthoritiesService) Generate() (CA, error) {
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		return CA{}, err
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&output)
+	if err != nil {
+		return CA{}, err
+	}
+
+	return output, nil
+}
+
+func (c CertificateAuthoritiesService) Create(certBody CertificateAuthorityBody) (CA, error) {
+	var output CA
+
+	body, err := json.Marshal(certBody)
+	if err != nil {
+		return CA{}, err // not tested
+	}
+
+	req, err := http.NewRequest("POST", "/api/v0/certificate_authorities", bytes.NewBuffer(body))
+	fmt.Printf("#%v\n", req)
+	if err != nil {
+		return CA{}, err // not tested
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return CA{}, err
+	}
+
+	if err = ValidateStatusOK(resp); err != nil {
 		return CA{}, err
 	}
 

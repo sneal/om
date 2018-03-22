@@ -79,8 +79,8 @@ func (ia InstallationAssetService) Export(outputFile string, pollingInterval int
 		return fmt.Errorf("could not make api request to installation_asset_collection endpoint: %s", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request failed: unexpected response")
+	if err = ValidateStatusOK(resp); err != nil {
+		return err
 	}
 
 	ia.progress.SetTotal(resp.ContentLength)
@@ -127,26 +127,34 @@ func (ia InstallationAssetService) Import(input ImportInstallationInput) error {
 		ia.liveWriter.Start()
 
 		for {
-			if ia.progress.GetCurrent() == ia.progress.GetTotal() {
-				ia.progress.End()
-				break
-			}
-
-			time.Sleep(time.Second)
-		}
-
-		liveLog := log.New(ia.liveWriter, "", 0)
-		startTime := time.Now().Round(time.Second)
-		ticker := time.NewTicker(time.Duration(input.PollingInterval) * time.Second)
-
-		for {
 			select {
 			case <-requestComplete:
-				ticker.Stop()
+				ia.progress.End()
 				ia.liveWriter.Stop()
 				progressComplete <- true
-			case now := <-ticker.C:
-				liveLog.Printf("%s elapsed, waiting for response from Ops Manager...\r", now.Round(time.Second).Sub(startTime).String())
+				return
+			default:
+				if ia.progress.GetCurrent() != ia.progress.GetTotal() {
+					time.Sleep(time.Second)
+					continue
+				}
+
+				ia.progress.End()
+
+				liveLog := log.New(ia.liveWriter, "", 0)
+				startTime := time.Now().Round(time.Second)
+				ticker := time.NewTicker(time.Duration(input.PollingInterval) * time.Second)
+
+				for {
+					select {
+					case <-requestComplete:
+						ticker.Stop()
+						ia.liveWriter.Stop()
+						progressComplete <- true
+					case now := <-ticker.C:
+						liveLog.Printf("%s elapsed, waiting for response from Ops Manager...\r", now.Round(time.Second).Sub(startTime).String())
+					}
+				}
 			}
 		}
 	}()

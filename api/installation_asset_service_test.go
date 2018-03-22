@@ -138,6 +138,7 @@ var _ = Describe("InstallationAssetService", func() {
 				Expect(liveWriter.StopCallCount()).To(Equal(1))
 
 			})
+
 			Context("when the polling interval is higher than the time it takes to export the installation", func() {
 				It("exits when the export finishes", func() {
 					client.DoStub = func(req *http.Request) (*http.Response, error) {
@@ -197,7 +198,8 @@ var _ = Describe("InstallationAssetService", func() {
 					service := api.NewInstallationAssetService(client, bar, liveWriter)
 
 					err := service.Export("fake-file", 1)
-					Expect(err).To(MatchError(ContainSubstring("request failed: unexpected response")))
+
+					Expect(err).To(MatchError(ContainSubstring("request failed: unexpected response:\nHTTP/0.0 500 Internal Server Error")))
 				})
 			})
 
@@ -421,7 +423,39 @@ var _ = Describe("InstallationAssetService", func() {
 					err := service.Import(api.ImportInstallationInput{
 						PollingInterval: 1,
 					})
-					Expect(err).To(MatchError(ContainSubstring("request failed: unexpected response")))
+					Expect(err).To(MatchError(ContainSubstring("request failed: unexpected response:\nHTTP/0.0 500 Internal Server Error")))
+				})
+			})
+
+			Context("when server responds with timeout error before export has finished", func() {
+				It("returns an error", func() {
+					client.DoStub = func(req *http.Request) (*http.Response, error) {
+						if req.Method != "POST" || req.URL.Path != "/api/v0/installation_asset_collection" {
+							return nil, nil
+						}
+
+						return &http.Response{
+							StatusCode: http.StatusRequestTimeout,
+							Body:       ioutil.NopCloser(strings.NewReader(`something from nginx probably xml`)),
+						}, nil
+					}
+
+					bar.GetCurrentReturns(0)
+					bar.GetTotalReturns(100)
+
+					done := make(chan bool)
+					var err error
+					go func() {
+						service := api.NewInstallationAssetService(client, bar, liveWriter)
+
+						err = service.Import(api.ImportInstallationInput{
+							PollingInterval: 1,
+						})
+						close(done)
+					}()
+
+					Eventually(done, 5*time.Second, 1*time.Second).Should(BeClosed())
+					Expect(err).To(MatchError(ContainSubstring("HTTP/0.0 408 Request Timeout")))
 				})
 			})
 		})

@@ -13,7 +13,7 @@ import (
 
 type ImportInstallationInput struct {
 	ContentLength   int64
-	Installation    io.Reader
+	File            io.Reader
 	ContentType     string
 	PollingInterval int
 }
@@ -109,7 +109,7 @@ func (ia InstallationAssetService) Export(outputFile string, pollingInterval int
 
 func (ia InstallationAssetService) Import(input ImportInstallationInput) error {
 	ia.progress.SetTotal(input.ContentLength)
-	body := ia.progress.NewBarReader(input.Installation)
+	body := ia.progress.NewBarReader(input.File)
 
 	req, err := http.NewRequest("POST", "/api/v0/installation_asset_collection", body)
 	if err != nil {
@@ -122,42 +122,10 @@ func (ia InstallationAssetService) Import(input ImportInstallationInput) error {
 	requestComplete := make(chan bool)
 	progressComplete := make(chan bool)
 
-	go func() {
-		ia.progress.Kickoff()
-		ia.liveWriter.Start()
+	service := FileService(ia)
+	uploadInput := UploadFileInput(input)
 
-		for {
-			select {
-			case <-requestComplete:
-				ia.progress.End()
-				ia.liveWriter.Stop()
-				progressComplete <- true
-				return
-			default:
-				if ia.progress.GetCurrent() != ia.progress.GetTotal() {
-					time.Sleep(time.Second)
-					continue
-				}
-
-				ia.progress.End()
-
-				liveLog := log.New(ia.liveWriter, "", 0)
-				startTime := time.Now().Round(time.Second)
-				ticker := time.NewTicker(time.Duration(input.PollingInterval) * time.Second)
-
-				for {
-					select {
-					case <-requestComplete:
-						ticker.Stop()
-						ia.liveWriter.Stop()
-						progressComplete <- true
-					case now := <-ticker.C:
-						liveLog.Printf("%s elapsed, waiting for response from Ops Manager...\r", now.Round(time.Second).Sub(startTime).String())
-					}
-				}
-			}
-		}
-	}()
+	go TrackProgress(service, requestComplete, progressComplete, uploadInput)
 
 	resp, err := ia.client.Do(req)
 	requestComplete <- true
@@ -210,4 +178,54 @@ func (ia InstallationAssetService) Delete() (InstallationsServiceOutput, error) 
 	}
 
 	return InstallationsServiceOutput{ID: installation.Install.ID}, nil
+}
+
+type UploadFileInput struct {
+	ContentLength   int64
+	File            io.Reader
+	ContentType     string
+	PollingInterval int
+}
+
+type FileService struct {
+	client     httpClient
+	progress   progress
+	liveWriter liveWriter
+}
+
+func TrackProgress(fs FileService, requestComplete chan bool, progressComplete chan bool, input UploadFileInput) {
+	fs.progress.Kickoff()
+	fs.liveWriter.Start()
+
+	for {
+		select {
+		case <-requestComplete:
+			fs.progress.End()
+			fs.liveWriter.Stop()
+			progressComplete <- true
+			return
+		default:
+			if fs.progress.GetCurrent() != fs.progress.GetTotal() {
+				time.Sleep(time.Second)
+				continue
+			}
+
+			fs.progress.End()
+
+			liveLog := log.New(fs.liveWriter, "", 0)
+			startTime := time.Now().Round(time.Second)
+			ticker := time.NewTicker(time.Duration(input.PollingInterval) * time.Second)
+
+			for {
+				select {
+				case <-requestComplete:
+					ticker.Stop()
+					fs.liveWriter.Stop()
+					progressComplete <- true
+				case now := <-ticker.C:
+					liveLog.Printf("%s elapsed, waiting for response from Ops Manager...\r", now.Round(time.Second).Sub(startTime).String())
+				}
+			}
+		}
+	}
 }

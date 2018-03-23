@@ -77,7 +77,7 @@ func (ii ImportInstallation) Execute(args []string) error {
 
 	err = ii.installationAssetImporterService.Import(api.ImportInstallationInput{
 		ContentLength:   submission.Length,
-		Installation:    submission.Content,
+		File:            submission.Content,
 		ContentType:     submission.ContentType,
 		PollingInterval: ii.Options.PollingInterval,
 	})

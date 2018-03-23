@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 const availableProductsEndpoint = "/api/v0/available_products"
 
 type UploadProductInput struct {
 	ContentLength   int64
-	Product         io.Reader
+	File            io.Reader
 	ContentType     string
 	PollingInterval int
 }
@@ -52,7 +50,7 @@ func NewAvailableProductsService(client httpClient, progress progress, liveWrite
 
 func (ap AvailableProductsService) Upload(input UploadProductInput) (UploadProductOutput, error) {
 	ap.progress.SetTotal(input.ContentLength)
-	body := ap.progress.NewBarReader(input.Product)
+	body := ap.progress.NewBarReader(input.File)
 
 	req, err := http.NewRequest("POST", availableProductsEndpoint, body)
 	if err != nil {
@@ -65,42 +63,10 @@ func (ap AvailableProductsService) Upload(input UploadProductInput) (UploadProdu
 	requestComplete := make(chan bool)
 	progressComplete := make(chan bool)
 
-	go func() {
-		ap.progress.Kickoff()
-		ap.liveWriter.Start()
+	service := FileService(ap)
+	uploadInput := UploadFileInput(input)
 
-		for {
-			select {
-			case <-requestComplete:
-				ap.progress.End()
-				ap.liveWriter.Stop()
-				progressComplete <- true
-				return
-			default:
-				if ap.progress.GetCurrent() != ap.progress.GetTotal() {
-					time.Sleep(time.Second)
-					continue
-				}
-
-				ap.progress.End()
-
-				liveLog := log.New(ap.liveWriter, "", 0)
-				startTime := time.Now().Round(time.Second)
-				ticker := time.NewTicker(time.Duration(input.PollingInterval) * time.Second)
-
-				for {
-					select {
-					case <-requestComplete:
-						ticker.Stop()
-						ap.liveWriter.Stop()
-						progressComplete <- true
-					case now := <-ticker.C:
-						liveLog.Printf("%s elapsed, waiting for response from Ops Manager...\r", now.Round(time.Second).Sub(startTime).String())
-					}
-				}
-			}
-		}
-	}()
+	go TrackProgress(service, requestComplete, progressComplete, uploadInput)
 
 	resp, err := ap.client.Do(req)
 	requestComplete <- true

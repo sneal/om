@@ -12,7 +12,7 @@ type UploadProduct struct {
 	logger          logger
 	productsService productUploader
 	Options         struct {
-		Product         string `long:"product"          short:"p"  required:"true" description:"path to product"`
+		File            string `long:"product"          short:"p"  required:"true" description:"path to product"`
 		PollingInterval int    `long:"polling-interval" short:"pi"                 description:"interval (in seconds) at which to print status" default:"1"`
 	}
 	extractor extractor
@@ -51,7 +51,7 @@ func (up UploadProduct) Execute(args []string) error {
 		return fmt.Errorf("could not parse upload-product flags: %s", err)
 	}
 
-	productName, productVersion, err := up.extractor.ExtractMetadata(up.Options.Product)
+	productName, productVersion, err := up.extractor.ExtractMetadata(up.Options.File)
 	if err != nil {
 		return fmt.Errorf("failed to extract product metadata: %s", err)
 	}
@@ -67,7 +67,7 @@ func (up UploadProduct) Execute(args []string) error {
 	}
 
 	up.logger.Printf("processing product")
-	err = up.multipart.AddFile("product[file]", up.Options.Product)
+	err = up.multipart.AddFile("product[file]", up.Options.File)
 	if err != nil {
 		return fmt.Errorf("failed to load product: %s", err)
 	}
@@ -81,7 +81,7 @@ func (up UploadProduct) Execute(args []string) error {
 
 	_, err = up.productsService.Upload(api.UploadProductInput{
 		ContentLength:   submission.Length,
-		Product:         submission.Content,
+		File:            submission.Content,
 		ContentType:     submission.ContentType,
 		PollingInterval: up.Options.PollingInterval,
 	})

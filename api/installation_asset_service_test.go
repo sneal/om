@@ -259,7 +259,7 @@ var _ = Describe("InstallationAssetService", func() {
 
 			err := service.Import(api.ImportInstallationInput{
 				ContentLength:   10,
-				Installation:    strings.NewReader("some installation"),
+				File:            strings.NewReader("some installation"),
 				ContentType:     "some content-type",
 				PollingInterval: 1,
 			})
@@ -303,7 +303,7 @@ var _ = Describe("InstallationAssetService", func() {
 
 			err := service.Import(api.ImportInstallationInput{
 				ContentLength:   10,
-				Installation:    strings.NewReader("some installation"),
+				File:            strings.NewReader("some installation"),
 				ContentType:     "some content-type",
 				PollingInterval: 1,
 			})
@@ -337,7 +337,7 @@ var _ = Describe("InstallationAssetService", func() {
 
 				err := service.Import(api.ImportInstallationInput{
 					ContentLength:   10,
-					Installation:    strings.NewReader("some installation"),
+					File:            strings.NewReader("some installation"),
 					ContentType:     "some content-type",
 					PollingInterval: 2,
 				})
@@ -378,7 +378,7 @@ var _ = Describe("InstallationAssetService", func() {
 				}(
 					api.ImportInstallationInput{
 						ContentLength:   10,
-						Installation:    strings.NewReader("some installation"),
+						File:            strings.NewReader("some installation"),
 						ContentType:     "some content-type",
 						PollingInterval: 20,
 					},

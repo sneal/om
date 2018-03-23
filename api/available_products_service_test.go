@@ -48,7 +48,7 @@ var _ = Describe("AvailableProductsService", func() {
 
 			output, err := service.Upload(api.UploadProductInput{
 				ContentLength:   10,
-				Product:         strings.NewReader("some content"),
+				File:            strings.NewReader("some content"),
 				ContentType:     "some content-type",
 				PollingInterval: 1,
 			})
@@ -86,7 +86,7 @@ var _ = Describe("AvailableProductsService", func() {
 
 			_, err := service.Upload(api.UploadProductInput{
 				ContentLength:   10,
-				Product:         strings.NewReader("some content"),
+				File:            strings.NewReader("some content"),
 				ContentType:     "some content-type",
 				PollingInterval: 1,
 			})
@@ -122,7 +122,7 @@ var _ = Describe("AvailableProductsService", func() {
 
 				_, err := service.Upload(api.UploadProductInput{
 					ContentLength:   10,
-					Product:         strings.NewReader("some content"),
+					File:            strings.NewReader("some content"),
 					ContentType:     "some content-type",
 					PollingInterval: 2,
 				})
@@ -161,7 +161,7 @@ var _ = Describe("AvailableProductsService", func() {
 
 				_, err := service.Upload(api.UploadProductInput{
 					ContentLength:   10,
-					Product:         strings.NewReader("some content"),
+					File:            strings.NewReader("some content"),
 					ContentType:     "some content-type",
 					PollingInterval: 20,
 				})

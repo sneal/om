@@ -28,7 +28,7 @@ func NewUnauthenticatedClient(target string, insecureSkipVerify bool, requestTim
 					InsecureSkipVerify: insecureSkipVerify,
 				},
 				Dial: (&net.Dialer{
-					Timeout:   5 * time.Second,
+					Timeout:   30 * time.Second,
 					KeepAlive: 30 * time.Second,
 				}).Dial,
 			},
